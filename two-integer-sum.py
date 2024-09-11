@@ -17,8 +17,14 @@ class Solution:
         self.target: int = target
     
     def twoSum(self) -> List[int]:
-        # Create a hashmap that stores the index number against the remainder after item is subtracted
+        # Create a hashmap that stores the value against the index number.
+        # Given an array [3,4,5,6]
+        # numsH = {3:0,4:1,5:2...}
         numsH = dict()
+
+        # Write an iteration that will check if the difference of target and current value of the iteration exists in the hashmap. 
+        # If the difference exists in the hashmap, return the index of difference value in the hashmap and the index of current value in the iteration.
+
         for index, value in enumerate(self.nums):
             diff = self.target - value
             if diff in numsH:
