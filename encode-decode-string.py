@@ -1,15 +1,17 @@
 
-
+"""
+    {length}{delimiter}{string}
+"""
 
 def encode(self, strs):
-    encoded_string: str = ""
-    
-    #append the length followed by delimiter and the string itself to encoded string
-    for string in strs:
-        encoded_string += str(len(string) + '#' + string)
+    #create an blank string
+    encoded_string = ''
+
+    #for each string, add the length + delimiter, and the string itself
+    for s in strs:
+        encoded_string += str(len(s)) + '#' + s
 
     return encoded_string
-
 
 def decode(self, string):
     #res: array of decoded strings
