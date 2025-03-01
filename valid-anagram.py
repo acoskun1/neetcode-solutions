@@ -33,7 +33,10 @@ class Solution:
             mapT[self.t[i]] = mapT.get(self.t[i], 0) + 1
 
         #return true if the frequencies of all characters are matching
-        return mapS == mapT
+        for j in mapS:
+            if mapS[j] != mapT.get(j, 0):
+                return False
+        return True
 
 class TestSolution(unittest.TestCase):
 
