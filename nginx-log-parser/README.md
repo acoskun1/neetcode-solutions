@@ -8,18 +8,18 @@ This guide explains how to:
 
 ## 1. Build the Docker Image
 
-  docker build -t custom-nginx-logger:alpine .
+    docker build -t custom-nginx-logger:alpine .
 
 ## 2. Run the Docker container
   
-  docker run -d custom-nginx-logger:alpine --name custom-nginx-logger
+    docker run -d custom-nginx-logger:alpine --name custom-nginx-logger
 
 ## 3. Stream container logs to /var/log/nginx/access.logs
 
-  docker logs -f custom-nginx-logger > /var/log/nginx/access.log  #requires sudo
+    docker logs -f custom-nginx-logger > /var/log/nginx/access.log  #requires sudo
 
 kscarlett/nginx-log-generator prints out the fake logs into stdout and does not have a request handler. This is an intuitive way.
 
 ## 4. Run the log-monitor.py script
 
-  python3 log-monitor.py
+    python3 log-monitor.py
