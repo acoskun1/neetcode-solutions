@@ -16,6 +16,10 @@ Assumptions:
 
 A log entry will be written to the access.log file per second.
 Each log entry will have identical formatting.
+
+Format:
+
+    $remote_addr - $remote_user [$time_local] "$request" $status $body_bytes_sent "$http_referer" "$http_user_agent"
 """
 
 #!/usr/bin/python3
@@ -23,6 +27,7 @@ Each log entry will have identical formatting.
 import os
 import time
 
+#define the log file location
 log_file: str = '/var/log/nginx/access.log'
 
 def follow_lines(file) -> str:
@@ -40,12 +45,27 @@ def main() -> None:
     try:
         #without loading the entire file to the memory, get tail of file
         with open(log_file, 'r') as f:
-            log_line: str = follow_lines(f)
-            #parse the log entry into a hashmap {'ip_address':'IP_ADDRESS', 'http_response': 'HTTP response'} etc
-            
+            #log_line is an iterator which can be iterated - each iteration will be a line collected at tail
+            log_line = follow_lines(f)
+            for line in log_line:
+                #split the string into a list of strings separated by whitespace
+                parts = line.split()
+                if len(parts) < 9:
+                    continue
+                #set variables according to parts[] indexing - print(parts)
+                ip_address = parts[0]
+                http_response_code = parts[8]
+                #request detail is enclosed inside double quotes of each log entry.
+                req_start = line.find('"') #finds the first double quote
+                req_end = line.find('"', req_start + 1) #finds the closing quote for setting request boundaries.
+                if req_start == -1 or req_end == -1:
+                    continue
+                request = line[req_start+1: req_end]
+                if http_response_code != '200':
+                    print(f'{ip_address} - {request} - {http_response_code}')
 
     except KeyboardInterrupt:
-        print('n\KeyboardInterrupted. Stopped Monitoring')
+        print("\nKeyboardInterrupted. Stopped Monitoring")
     except Exception as e:
         print(f'Error: {e}')
 
