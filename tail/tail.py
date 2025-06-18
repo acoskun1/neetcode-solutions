@@ -6,60 +6,82 @@ from typing import List
 
 class Tail:
 
-    def __init__(self, 
-                 follow_lines: bool = False,
-                 line_count: int = 10,
-                 file_path: str
-                 ) -> None:
-        self.follow_lines = follow_lines
+    def __init__(self, file_path: str, follow: bool = False, line_count: int = 10) -> None:
+        """
+        follow:     bool: '-f' option, continuously prints end of file
+        file_path:  str : path of file
+        line_count: int : number of lines to print from the end
+        
+        is_regular_file: bool: regular file 
+        """
+        self.follow = follow
         self.line_count = line_count
-        self.file_path = file_path
-        self.regular_file = self._is_regular_file()
+        self.file_path = file_path 
+        self.is_regular_file = self._is_regular_file()
 
     def _is_regular_file(self) -> bool:
-        if os.path.exists(self.file_path)
-            and os.path.is_file(self.file_path)
-            and not os.path.is_symlink(self.file_path)
-            and not os.path.is_dir(self.file_path):
+        """
+        Checks if file_path exists, valid file, not a symbolic link and not a directory
+        """
+        if (os.path.exists(self.file_path)
+                and os.path.isfile(self.file_path) 
+                and not os.path.islink(self.file_path) 
+                and not os.path.isdir(self.file_path)):
             return True
-        else:
-            return False
+        return False
+
+    def tail(self) -> None:
+        """
+        Entrypoint, if file is valid and accessible, it prints "n" lines using
+        _get_n_lines helper method which returns a list of lines.
+
+        If following, uses follow_lines helper method which constantly prints last line.
+        """
+        if not self.is_regular_file:
+            print(f"{self.file_path} is not a valid file!")
+            return
+        try:
+            with open(self.file_path, 'r') as file:
+                for line in self._get_n_lines(file):
+                    if line:
+                        print(f'{line}\n')
+
+                if self.follow:
+                    self.follow_lines(file)
+        except Exception as e:
+            print(f'Error: {e}')
 
     def _get_n_lines(self, file) -> List[str]:
         """
-        Helper method, reads the last n lines from a file. 
-            n = self.line_count
-        
-        Seek to the end of file
-        Read chunk backwards
-        Accumulate lines
-        Stop when enough lines are collected
-        Handle edge cases
+        Helper method, reads a file backwards in chunks and returns a list of lines.
+
+        lines:  list of lines
+        pos:    current file pointer - gets updated as chunks are read backwards
+        buffer: size in bytes of each chunk read from file (1 KiB)
         """
-        # Read last 'n' lines efficiently
-        buffer = 1024 # Size (in bytes) of each chunk read from file.
+        lines: List[str] = []
         file.seek(0, os.SEEK_END) # Move file pointer to the end of the file.
-        size = file.tell() # Get the current position == file size since we seeked the end...
-        lines = [] # List to collect the lines read.
-        pos = size # Keep track of current position while reading backwards. 
-        while len(lines) < self.line_count and pos > 0: # Continue reading chunks backwards until we have enough lines, or reach start of file.
-            read_size = min(buffer, pos) # Determine how many bytes to read next 
-            pos -= read_size # Move current position back by chunk size.
-            file.seek(pos) # Move file pointer to the new current position.
-            chunk = file.read(read_size) # Read the chunk of data from the current position
-            lines = chunk.splitlines(True) + lines # Split the chunk into lines keeping line endings and add them to front of the lines list.
+        pos = file.tell() # Tracks current file pointer position while reading backwards.
+        buffer: int = 1024 #1KiB
+        while len(lines) < self.line_count and pos > 0: #until enough lines are collected and file pointer comes to start of file.
+            read_size = min(buffer, pos) # if pos < 1KiB read only pos amount, no need to read excess bytes. Fallback.
+            pos -= read_size # after each read, push pos back by read_size.
+            chunk = file.read(read_size) # read chunk
+            lines = chunk.splitlines() + lines # collect lines by splitting and adding new lines to front of the list.
 
-        # Fallback for Small Files
-        if len(lines) < self.line_count: # if file is too small, and not enough lines are collected, read the whole file, take the last n lines
-            file.seek(0) # Reset the file pointer to the start aka. SEEK_SET
-            lines = file.readlines()[-self.line_count:] # Read all lines and take the last n lines.
-        
-        # Return exactly n lines from the end of lines list.
-        return lines[-self.line_count:] 
+        #if after reading backwards, the number of lines collected is less than required,
+        #adjust file pointer to beginning of the file and read all lines and only return n many from the end.
+        if len(lines) < self.line_count:
+            file.seek(0)
+            lines = file.readlines()[-self.line_count:]
 
-    def follow_file(self, file) -> str:
+        #return n many lines starting from the back == latest line.
+        return lines[-self.line_count:]
+
+    def follow_lines(self, file) -> None:
         """
-        Helper method, continously reads last line of file and outputs to stdout.
+        Helper method, continuously prints the last line. Sends file pointer to the end of file and 
+        reads that line at the position. Repeats constantly
         """
         file.seek(0, os.SEEK_END)
         while True:
@@ -67,46 +89,25 @@ class Tail:
             if not line:
                 time.sleep(0.1)
                 continue
-            sys.stdout.write(line)
-            sys.stdout.flush()
-
-
-    def tail(self) -> None:
-        if not self.regular_file:
-            print(f"Error: {self.file_path} is not a regular file!")
-            return
-        try:
-            with open(self.file_path, 'r') as file:
-                for line in self._get_n_lines(file):
-                    sys.stdout.write(line)
-                sys.stdout.flush()
-
-                if self.follow:
-                    self.follow_file(file)
-        except Exception as e:
-            print(f'Error: {e}')
-
+            print(f'{line}\n')
 
 if __name__ == "__main__":
-    # args
-    follow_lines: bool = False
-    line_count: int = 10
-    file_path: str = None
     args = sys.argv[1:]
+    line_count = 10 
+    follow = False
+    file_path = None
 
-    i: int = 0
+    i = 0 
     while i < len(args):
         arg = args[i]
-        if arg == "-f":
-            follow_lines = True
-        elif arg == '-n':
-            i += 1
+        if arg == "-n":
+            i += 1 
             line_count = int(args[i])
+        elif arg == '-f':
+            follow = True
         else:
             file_path = arg
+        i += 1
 
-    if not file_path: sys.exit(1)
-
-    tail = Tail(file_path, line_count, follow_lines)
+    tail = Tail(file_path, follow, line_count)
     tail.tail()
-
