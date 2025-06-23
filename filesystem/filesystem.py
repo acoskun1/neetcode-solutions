@@ -19,6 +19,14 @@ class FileSystemTree:
         self.nodes = {}
 
     def build_file_system_tree(self, fs: dict) -> None:
+        """
+        Creates nodes and establish parent-child relationships
+
+        Args:
+            fs: dict - dictionary ionput of filesystem objects. Iterated twice: first to create nodes, second to create parent-child relationships.
+        """
+        # iterate fs dictionary, if entity is file, create file node with is_file=True, size=metadata['size']. If entity is dir, create dir node with is_file=False, size=0
+        # if key is invalid entity_id, raise ValueError
         for entity_id, metadata in fs.items():
             if metadata['type'] == 'file':
                 node = Node(entity_id, metadata['name'], is_file=True, size=metadata['size'])
@@ -27,6 +35,7 @@ class FileSystemTree:
             else:
                 raise ValueError(f"Invalid type: {metadata['type']}")
 
+            # add created node to tree without p-c relationship
             self.nodes[entity_id] = node
 
         # build parent-child relationship
@@ -37,9 +46,21 @@ class FileSystemTree:
                     child_node = self.nodes[child]
                     child_node.parent = parent_node
                     parent_node.children[child] = child_node
+                    # once parent-child relationship is built, update parent size.
                     self._update_parent_size(child_node)
 
     def _update_parent_size(self, child_node: Node) -> None:
+        """
+        Updates the parent nodes by the added child node's size size_delta
+
+        Args:
+            node: Node - actual child node
+
+        obtain size_delta from the added node's size attribute
+        set the immediate parent to current which will be updated
+        while there is a current, update current size by size_delta
+        continue, update current to current.parent - this updates parent at each level above.
+        """
         size_delta = child_node.size
         current = child_node
         while current:
@@ -47,6 +68,16 @@ class FileSystemTree:
             current = current.parent
 
     def get_size(self, entity_id) -> int:
+        """
+        Returns folder/file/entity size
+
+        Args:
+            entity_id: id of the entity.
+
+        Check if entity_id is valid - in self.nodes.keys()
+        If not, raise KeyError
+        Else return node's actual size
+        """
         if entity_id not in self.nodes.keys():
             raise KeyError(f"Key not found: {entity_id}")
         else:
