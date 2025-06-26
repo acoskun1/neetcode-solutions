@@ -17,8 +17,10 @@ def hash_file(path: str, chunk_size: int = 8192) -> Optional[str]:
     hash = hashlib.sha256()
     try:
         with open(path, 'rb') as f:
-            while chunk:
+            while True:
                 chunk = f.read(chunk_size)
+                if not chunk:
+                    break
                 hash.update(chunk)
     except (FileNotFound, PermissionError):
         return None
